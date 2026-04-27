@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/expenseListFragment">
+
+    <fragment
+        android:id="@+id/expenseListFragment"
+        android:name="com.example.budget.ui.ExpenseListFragment"
+        android:label="Transacciones"
+        tools:layout="@layout/fragment_expense_list">
+        <action
+            android:id="@+id/action_expenseListFragment_to_addExpenseFragment"
+            app:destination="@id/addExpenseFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/addExpenseFragment"
+        android:name="com.example.budget.ui.AddExpenseFragment"
+        android:label="{title}"
+        tools:layout="@layout/fragment_add_expense">
+        <argument
+            android:name="transactionId"
+            app:argType="integer"
+            android:defaultValue="-1" />
+        <argument
+            android:name="title"
+            app:argType="string"
+            android:defaultValue="Añadir Transacción" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/statisticsFragment"
+        android:name="com.example.budget.ui.StatisticsFragment"
+        android:label="Estadísticas"
+        tools:layout="@layout/fragment_statistics" />
+
+    <fragment
+        android:id="@+id/categoryManagerFragment"
+        android:name="com.example.budget.ui.CategoryManagerFragment"
+        android:label="Gestionar Categorías"
+        tools:layout="@layout/fragment_category_manager" />
+
+    <fragment
+        android:id="@+id/budgetFragment"
+        android:name="com.example.budget.ui.BudgetFragment"
+        android:label="Presupuesto"
+        tools:layout="@layout/fragment_budget" />
+</navigation>

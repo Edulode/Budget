@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Budget</string>
+    <string name="add_expense">Añadir Gasto</string>
+    <string name="title">Título</string>
+    <string name="amount">Monto</string>
+    <string name="category">Categoría</string>
+    <string name="save">Guardar</string>
+</resources>

@@ -59,8 +59,17 @@ dependencies {
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
 
-    // MPAndroidChart
+    // Charts
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+
+    // ML Kit Text Recognition
+    implementation(libs.mlkit.text.recognition)
+
+    // CameraX
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

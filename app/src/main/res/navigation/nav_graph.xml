@@ -28,6 +28,9 @@
             android:name="title"
             app:argType="string"
             android:defaultValue="Añadir Transacción" />
+        <action
+            android:id="@+id/action_addExpenseFragment_to_scannerFragment"
+            app:destination="@id/scannerFragment" />
     </fragment>
 
     <fragment
@@ -47,4 +50,10 @@
         android:name="com.example.budget.ui.BudgetFragment"
         android:label="Presupuesto"
         tools:layout="@layout/fragment_budget" />
+
+    <fragment
+        android:id="@+id/scannerFragment"
+        android:name="com.example.budget.ui.ScannerFragment"
+        android:label="Escanear Ticket"
+        tools:layout="@layout/fragment_scanner" />
 </navigation>

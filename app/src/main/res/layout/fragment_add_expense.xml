@@ -22,7 +22,7 @@
                 android:id="@+id/toggleGroupType"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="32dp"
+                android:layout_marginBottom="24dp"
                 app:checkedButton="@+id/btnTypeExpense"
                 app:singleSelection="true"
                 app:selectionRequired="true">
@@ -49,6 +49,16 @@
                     android:letterSpacing="0"
                     app:strokeColor="@color/divider" />
             </com.google.android.material.button.MaterialButtonToggleGroup>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnScanTicket"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                android:text="Escanear Ticket (OCR)"
+                app:icon="@android:drawable/ic_menu_camera"
+                android:textAllCaps="false" />
 
             <TextView
                 android:layout_width="wrap_content"

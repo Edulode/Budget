@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.setFragmentResultListener
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import com.example.budget.BudgetApplication
@@ -31,6 +32,25 @@ class AddExpenseFragment : Fragment() {
     private var selectedDate: Long = System.currentTimeMillis()
     private var existingTransaction: Transaction? = null
     private var currentType = TransactionType.EXPENSE
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // Listen for scanner results
+        setFragmentResultListener("scanner_result") { _, bundle ->
+            val merchant = bundle.getString("merchant")
+            val amount = bundle.getDouble("amount")
+            
+            if (!merchant.isNullOrEmpty()) {
+                binding.etTitle.setText(merchant)
+            }
+            if (amount > 0) {
+                // Format for the MoneyTextWatcher
+                val formatted = NumberFormat.getCurrencyInstance(Locale.US).format(amount)
+                binding.etAmount.setText(formatted)
+            }
+            Toast.makeText(requireContext(), "Ticket escaneado con éxito", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -58,6 +78,7 @@ class AddExpenseFragment : Fragment() {
                 }
             }
             binding.btnDelete.visibility = View.VISIBLE
+            binding.btnScanTicket.visibility = View.GONE // Don't show scanner on edit
         } else {
             setupCategoryDropdown()
         }
@@ -72,6 +93,9 @@ class AddExpenseFragment : Fragment() {
 
         binding.btnSave.setOnClickListener { saveTransaction() }
         binding.btnDelete.setOnClickListener { deleteTransaction() }
+        binding.btnScanTicket.setOnClickListener {
+            findNavController().navigate(R.id.action_addExpenseFragment_to_scannerFragment)
+        }
         binding.btnManageCategories.setOnClickListener {
             findNavController().navigate(R.id.categoryManagerFragment)
         }
@@ -106,7 +130,6 @@ class AddExpenseFragment : Fragment() {
     private fun populateFields(transaction: Transaction) {
         binding.etTitle.setText(transaction.title)
         
-        // Format amount for the watcher
         val formattedAmount = NumberFormat.getCurrencyInstance(Locale.US).format(transaction.amount)
         binding.etAmount.setText(formattedAmount)
         

@@ -28,6 +28,7 @@ class ScannerFragment : Fragment() {
     private val binding get() = _binding!!
 
     private var imageCapture: ImageCapture? = null
+    private var cameraProvider: ProcessCameraProvider? = null
     private lateinit var cameraExecutor: ExecutorService
 
     private val requestPermissionLauncher = registerForActivityResult(
@@ -59,32 +60,39 @@ class ScannerFragment : Fragment() {
             requestPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
 
-        binding.btnCapture.setOnClickListener { takePhoto() }
+        binding.btnCapture.setOnClickListener { 
+            binding.btnCapture.isEnabled = false
+            takePhoto() 
+        }
     }
 
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())
 
         cameraProviderFuture.addListener({
-            val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
+            try {
+                cameraProvider = cameraProviderFuture.get()
 
-            val preview = Preview.Builder()
-                .build()
-                .also {
+                val preview = Preview.Builder().build().also {
                     it.setSurfaceProvider(binding.previewView.surfaceProvider)
                 }
 
-            imageCapture = ImageCapture.Builder().build()
+                imageCapture = ImageCapture.Builder()
+                    .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+                    .build()
 
-            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+                val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
-            try {
-                cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(
+                cameraProvider?.unbindAll()
+                cameraProvider?.bindToLifecycle(
                     viewLifecycleOwner, cameraSelector, preview, imageCapture
                 )
             } catch (exc: Exception) {
-                Log.e("ScannerFragment", "Use case binding failed", exc)
+                Log.e("ScannerFragment", "Camera start failed", exc)
+                if (isAdded) {
+                    Toast.makeText(requireContext(), "Error al iniciar cámara", Toast.LENGTH_SHORT).show()
+                    binding.btnCapture.isEnabled = true
+                }
             }
 
         }, ContextCompat.getMainExecutor(requireContext()))
@@ -101,7 +109,11 @@ class ScannerFragment : Fragment() {
                 }
 
                 override fun onError(exception: ImageCaptureException) {
-                    Log.e("ScannerFragment", "Photo capture failed: ${exception.message}", exception)
+                    Log.e("ScannerFragment", "Photo capture failed", exception)
+                    if (isAdded) {
+                        Toast.makeText(requireContext(), "Error al capturar foto", Toast.LENGTH_SHORT).show()
+                        binding.btnCapture.isEnabled = true
+                    }
                 }
             }
         )
@@ -116,15 +128,21 @@ class ScannerFragment : Fragment() {
 
             recognizer.process(image)
                 .addOnSuccessListener { visionText ->
-                    extractData(visionText.text)
+                    if (isAdded) extractData(visionText.text)
                 }
                 .addOnFailureListener { e ->
                     Log.e("ScannerFragment", "Text recognition failed", e)
-                    Toast.makeText(requireContext(), "Error al reconocer texto", Toast.LENGTH_SHORT).show()
+                    if (isAdded) {
+                        Toast.makeText(requireContext(), "Error al procesar ticket", Toast.LENGTH_SHORT).show()
+                        binding.btnCapture.isEnabled = true
+                    }
                 }
                 .addOnCompleteListener {
                     imageProxy.close()
                 }
+        } else {
+            imageProxy.close()
+            if (isAdded) binding.btnCapture.isEnabled = true
         }
     }
 
@@ -132,7 +150,7 @@ class ScannerFragment : Fragment() {
         val lines = text.split("\n")
         var merchant = ""
         
-        // Attempt to find Merchant (usually first non-numeric line)
+        // Find Merchant: usually the first non-trivial line
         for (line in lines) {
             val cleaned = line.trim()
             if (cleaned.length > 3 && !cleaned.any { it.isDigit() } && merchant.isEmpty()) {
@@ -141,28 +159,65 @@ class ScannerFragment : Fragment() {
             }
         }
 
-        // Regex for amounts like 1,234.56 or 12.50
-        val amountPattern = Pattern.compile("(?i)(total|importe|neto|pago|monto|sum|amt).*?(\\d+[.,]\\d{2})|(\\d+[.,]\\d{2})")
+        val allAmounts = mutableListOf<Double>()
+        val amountPattern = Pattern.compile("(\\d+[.,]\\d{2})")
         val matcher = amountPattern.matcher(text)
-        
-        val amounts = mutableListOf<Double>()
         while (matcher.find()) {
-            val match = matcher.group(2) ?: matcher.group(3)
-            match?.let {
+            matcher.group(1)?.let {
                 val normalized = it.replace(",", ".")
-                amounts.add(normalized.toDouble())
+                try { allAmounts.add(normalized.toDouble()) } catch (e: Exception) {}
             }
         }
 
-        // Usually the largest amount is the total
-        val totalAmount = amounts.maxOrNull() ?: 0.0
+        var finalAmount = 0.0
+        val lowercaseText = text.lowercase()
+        
+        // Priority logic for TOTAL
+        val totalKeywords = listOf("total", "total mxn", "monto total", "pago total", "total a pagar", "neto")
+        val changeKeywords = listOf("cambio", "su cambio", "vuelto")
+        val paymentKeywords = listOf("efectivo", "recibido", "pago con", "visa", "mastercard")
+
+        var bestTotal = -1.0
+        
+        // Strategy: Look for lines containing "TOTAL" and a number
+        for (line in lines) {
+            val lowerLine = line.lowercase()
+            if (totalKeywords.any { lowerLine.contains(it) }) {
+                val lineMatcher = amountPattern.matcher(line)
+                if (lineMatcher.find()) {
+                    bestTotal = lineMatcher.group(1)?.replace(",", ".")?.toDouble() ?: -1.0
+                    break
+                }
+            }
+        }
+
+        if (bestTotal > 0) {
+            finalAmount = bestTotal
+        } else if (allAmounts.isNotEmpty()) {
+            val sorted = allAmounts.sortedDescending()
+            // If "Payment" or "Change" words are present, the total is likely the 2nd largest
+            // (Standard sequence: Payment > Total > Change)
+            val hasPaymentInfo = paymentKeywords.any { lowercaseText.contains(it) } || changeKeywords.any { lowercaseText.contains(it) }
+            
+            finalAmount = if (hasPaymentInfo && sorted.size >= 2) {
+                // If the largest is huge compared to second (e.g. 500 paid for 45 total), pick second
+                if (sorted[0] > sorted[1]) sorted[1] else sorted[0]
+            } else {
+                sorted[0]
+            }
+        }
 
         val resultBundle = Bundle().apply {
             putString("merchant", merchant)
-            putDouble("amount", totalAmount)
+            putDouble("amount", finalAmount)
         }
-        setFragmentResult("scanner_result", resultBundle)
-        findNavController().popBackStack()
+        
+        activity?.runOnUiThread {
+            if (isAdded) {
+                setFragmentResult("scanner_result", resultBundle)
+                findNavController().popBackStack()
+            }
+        }
     }
 
     private fun allPermissionsGranted() = ContextCompat.checkSelfPermission(
@@ -171,6 +226,9 @@ class ScannerFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        try {
+            cameraProvider?.unbindAll()
+        } catch (e: Exception) {}
         cameraExecutor.shutdown()
         _binding = null
     }

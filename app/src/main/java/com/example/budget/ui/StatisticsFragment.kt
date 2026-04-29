@@ -18,7 +18,7 @@ import com.example.budget.databinding.FragmentStatisticsBinding
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.*
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
-import com.github.mikephil.charting.formatter.PercentFormatter
+import com.github.mikephil.charting.formatter.ValueFormatter
 import com.github.mikephil.charting.utils.ColorTemplate
 import java.text.NumberFormat
 import java.util.*
@@ -90,21 +90,32 @@ class StatisticsFragment : Fragment() {
         val entries = summaries.map { PieEntry(it.amount.toFloat(), it.category) }
         val dataSet = PieDataSet(entries, "")
         
+        // Dynamic and varied colors
         val colors = ArrayList<Int>()
-        for (c in ColorTemplate.VORDIPLOM_COLORS) colors.add(c)
-        for (c in ColorTemplate.JOYFUL_COLORS) colors.add(c)
+        for (c in ColorTemplate.MATERIAL_COLORS) colors.add(c)
         for (c in ColorTemplate.COLORFUL_COLORS) colors.add(c)
+        for (c in ColorTemplate.JOYFUL_COLORS) colors.add(c)
+        for (c in ColorTemplate.VORDIPLOM_COLORS) colors.add(c)
+        for (c in ColorTemplate.PASTEL_COLORS) colors.add(c)
         
         dataSet.colors = colors
         dataSet.setDrawValues(true)
-        dataSet.valueTextSize = 12f
-        dataSet.valueTextColor = Color.DKGRAY
-        dataSet.valueFormatter = PercentFormatter(binding.pieChart)
+        dataSet.valueTextSize = 11f
+        dataSet.valueTextColor = ContextCompat.getColor(requireContext(), R.color.text_main)
+        
+        // Show amount instead of percentage
+        dataSet.valueFormatter = object : ValueFormatter() {
+            private val format = NumberFormat.getCurrencyInstance(Locale.US)
+            override fun getFormattedValue(value: Float): String {
+                return format.format(value.toDouble())
+            }
+        }
+        
         dataSet.sliceSpace = 3f
 
         binding.pieChart.apply {
             data = PieData(dataSet)
-            setUsePercentValues(true)
+            setUsePercentValues(false)
             description.isEnabled = false
             legend.isEnabled = true
             legend.isWordWrapEnabled = true
@@ -116,7 +127,7 @@ class StatisticsFragment : Fragment() {
             
             setHoleColor(Color.TRANSPARENT)
             setCenterTextColor(ContextCompat.getColor(requireContext(), R.color.text_main))
-            setEntryLabelColor(Color.DKGRAY)
+            setEntryLabelColor(ContextCompat.getColor(requireContext(), R.color.text_main))
             setEntryLabelTextSize(10f)
             
             animateY(1000)
@@ -150,27 +161,42 @@ class StatisticsFragment : Fragment() {
             labels.add("$month/$year")
         }
 
+        if (incomeEntries.isEmpty() && expenseEntries.isEmpty()) {
+            binding.barChart.clear()
+            return
+        }
+
+        val format = NumberFormat.getCurrencyInstance(Locale.US)
+        val valueFormatter = object : ValueFormatter() {
+            override fun getFormattedValue(value: Float): String = format.format(value)
+        }
+
         val incomeSet = BarDataSet(incomeEntries, "Ingresos")
         incomeSet.color = Color.parseColor("#22C55E")
         incomeSet.setDrawValues(true)
         incomeSet.valueTextColor = ContextCompat.getColor(requireContext(), R.color.text_secondary)
-        incomeSet.valueTextSize = 10f
+        incomeSet.valueTextSize = 8f
+        incomeSet.valueFormatter = valueFormatter
 
         val expenseSet = BarDataSet(expenseEntries, "Gastos")
         expenseSet.color = Color.parseColor("#EF4444")
         expenseSet.setDrawValues(true)
         expenseSet.valueTextColor = ContextCompat.getColor(requireContext(), R.color.text_secondary)
-        expenseSet.valueTextSize = 10f
+        expenseSet.valueTextSize = 8f
+        expenseSet.valueFormatter = valueFormatter
 
         val barData = BarData(incomeSet, expenseSet)
-        barData.barWidth = 0.35f
+        val barWidth = 0.35f
+        val barSpace = 0.05f
+        val groupSpace = 0.2f
+        barData.barWidth = barWidth
 
         binding.barChart.apply {
             data = barData
             
-            xAxis.axisMinimum = -0.5f
-            xAxis.axisMaximum = labels.size.toFloat() - 0.5f
-            groupBars(-0.5f, 0.2f, 0.05f) 
+            xAxis.axisMinimum = 0f
+            xAxis.axisMaximum = labels.size.toFloat()
+            groupBars(0f, groupSpace, barSpace)
             
             xAxis.valueFormatter = IndexAxisValueFormatter(labels)
             xAxis.position = XAxis.XAxisPosition.BOTTOM
@@ -182,8 +208,6 @@ class StatisticsFragment : Fragment() {
             axisLeft.setDrawGridLines(true)
             axisLeft.gridColor = Color.parseColor("#F1F5F9")
             axisLeft.textColor = ContextCompat.getColor(requireContext(), R.color.text_secondary)
-            
-            // Adjust Y axis so small bars are more visible relative to each other
             axisLeft.axisMinimum = 0f
             
             axisRight.isEnabled = false
@@ -215,7 +239,7 @@ class StatisticsFragment : Fragment() {
             it.type == TransactionType.INCOME && eCal.get(Calendar.MONTH) == currentMonth && eCal.get(Calendar.YEAR) == currentYear
         }.sumOf { it.amount }
 
-        val format = NumberFormat.getCurrencyInstance(Locale.getDefault())
+        val format = NumberFormat.getCurrencyInstance(Locale.US)
         
         binding.tvComparison.text = "Este mes:\nIngresos: ${format.format(thisMonthIncome)}\nGastos: ${format.format(thisMonthExpenses)}"
 

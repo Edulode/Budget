@@ -39,19 +39,19 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 
-    <com.google.android.material.button.MaterialButton
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/btnCapture"
-        style="@style/Widget.Material3.Button.IconButton"
-        android:layout_width="72dp"
-        android:layout_height="72dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_marginBottom="48dp"
+        android:contentDescription="Take photo"
         app:backgroundTint="@color/white"
-        app:cornerRadius="36dp"
-        app:icon="@android:drawable/ic_menu_camera"
+        app:fabCustomSize="72dp"
         app:iconSize="32dp"
-        app:iconTint="@color/black"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:srcCompat="@android:drawable/ic_menu_camera"
+        app:tint="@color/black" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
